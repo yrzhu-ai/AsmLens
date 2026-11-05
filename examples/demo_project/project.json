@@ -1,0 +1,48 @@
+{
+  "name": "AsmLens demo",
+  "version": "0.1.0",
+  "chrom_sizes": "chrom.sizes",
+  "problems_file": "problems.tsv",
+  "tracks": [
+    {
+      "id": "zero_coverage",
+      "name": "Zero coverage",
+      "type": "bed",
+      "file": "tracks/zero_coverage.bed",
+      "color": "#e41a1c",
+      "height": 26,
+      "kind": "ZERO_COV"
+    },
+    {
+      "id": "craq_CRE",
+      "name": "CRAQ CRE (regional error)",
+      "type": "bed",
+      "file": "tracks/craq_CRE.bed",
+      "color": "#984ea3",
+      "height": 26,
+      "kind": "CRE"
+    },
+    {
+      "id": "low_qv",
+      "name": "Low QV (≤30)",
+      "type": "bed",
+      "file": "tracks/low_qv.bed",
+      "color": "#4daf4a",
+      "height": 26,
+      "kind": "LOW_QV"
+    },
+    {
+      "id": "coverage",
+      "name": "Coverage (1000 bp mean)",
+      "type": "bedgraph",
+      "file": "tracks/coverage.bedgraph",
+      "color": "#377eb8",
+      "height": 64,
+      "kind": "COV"
+    }
+  ],
+  "defaults": {
+    "problem_only": true,
+    "flank_bp": 20000
+  }
+}

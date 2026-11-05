@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "asmlens"
+version = "0.1.0"
+description = "IGV-like viewer for assembly problem regions from coverage/CRAQ/QV coordinates (no BAM required)"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Yirui" }]
+keywords = ["genome", "assembly", "CRAQ", "QV", "IGV", "coverage"]
+dependencies = [
+  "fastapi>=0.110",
+  "uvicorn[standard]>=0.27",
+  "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+desktop = ["pywebview>=5.0"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+asmlens = "asmlens.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["server"]

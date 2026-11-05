@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AsmLens</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="toolbar">
+    <div class="brand">AsmLens</div>
+    <label class="field">
+      <span>Chr</span>
+      <select id="chromSelect"></select>
+    </label>
+    <label class="field grow">
+      <span>Locus</span>
+      <input id="locusInput" type="text" placeholder="Chr01:1000000-2000000" />
+    </label>
+    <button id="btnGo" type="button">Go</button>
+    <button id="btnZoomIn" type="button" title="Zoom in">+</button>
+    <button id="btnZoomOut" type="button" title="Zoom out">−</button>
+    <button id="btnFit" type="button">Fit chr</button>
+    <span id="status" class="status"></span>
+  </header>
+
+  <div class="main">
+    <aside class="sidebar">
+      <div class="side-head">
+        <h2>Problem regions</h2>
+        <select id="typeFilter">
+          <option value="">All types</option>
+        </select>
+      </div>
+      <div id="problemList" class="problem-list"></div>
+    </aside>
+    <section class="viewer">
+      <canvas id="ruler" height="28"></canvas>
+      <div id="tracks" class="tracks"></div>
+      <div class="hint">Drag to pan · Scroll to zoom · Click a problem to jump (IGV-style)</div>
+    </section>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
