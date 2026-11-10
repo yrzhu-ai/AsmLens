@@ -1,4 +1,7 @@
-"""python -m asmlens_desktop --project PATH"""
+"""python -m asmlens_desktop [--project PATH]
+
+省略 --project 时弹出选择框；取消则打开演示工程。
+"""
 
 from __future__ import annotations
 
@@ -8,7 +11,6 @@ from pathlib import Path
 
 
 def main() -> int:
-    # Ensure server package importable when running from repo checkout
     repo = Path(__file__).resolve().parents[2]
     server = repo / "server"
     if str(server) not in sys.path:
@@ -17,7 +19,7 @@ def main() -> int:
     from asmlens.cli import main as asmlens_main
 
     p = argparse.ArgumentParser(description="AsmLens desktop")
-    p.add_argument("-p", "--project", required=True)
+    p.add_argument("-p", "--project", default=None, help="工程目录或交付 zip（可省略）")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--width", type=int, default=1400)
@@ -25,8 +27,6 @@ def main() -> int:
     args = p.parse_args()
     argv = [
         "desktop",
-        "--project",
-        args.project,
         "--host",
         args.host,
         "--port",
@@ -36,6 +36,8 @@ def main() -> int:
         "--height",
         str(args.height),
     ]
+    if args.project:
+        argv.extend(["--project", args.project])
     return asmlens_main(argv)
 
 

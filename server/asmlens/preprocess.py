@@ -112,6 +112,55 @@ def write_regions_tsv(
     return n
 
 
+def find_fasta_gaps(
+    fasta: Path,
+    *,
+    min_n: int = 10,
+) -> List[Tuple[str, int, int, int]]:
+    """
+    Scan FASTA for runs of N/n (assembly gaps).
+    Returns 1-based closed intervals (chrom, start, end, length).
+    """
+    fasta = Path(fasta)
+    regions: List[Tuple[str, int, int, int]] = []
+    chrom: Optional[str] = None
+    pos = 0  # 1-based position of last written base
+    run_start: Optional[int] = None
+
+    def flush_run(end_pos: int) -> None:
+        nonlocal run_start
+        if chrom is None or run_start is None:
+            return
+        length = end_pos - run_start + 1
+        if length >= min_n:
+            regions.append((chrom, run_start, end_pos, length))
+        run_start = None
+
+    with fasta.open(encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            if not line:
+                continue
+            if line.startswith(">"):
+                flush_run(pos)
+                chrom = line[1:].strip().split()[0] if line.strip()[1:] else "unknown"
+                pos = 0
+                run_start = None
+                continue
+            seq = line.strip()
+            if not seq or chrom is None:
+                continue
+            for ch in seq:
+                pos += 1
+                if ch in "Nn":
+                    if run_start is None:
+                        run_start = pos
+                else:
+                    if run_start is not None:
+                        flush_run(pos - 1)
+        flush_run(pos)
+    return regions
+
+
 def write_regions_bed(
     regions: Iterable[Tuple[str, int, int, int]],
     path: Path,

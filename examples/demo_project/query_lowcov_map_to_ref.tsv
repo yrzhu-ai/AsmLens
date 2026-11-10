@@ -1,0 +1,6 @@
+region_id	chrom	start	end	length	mapped	mapped_bp	mapped_frac	status	other_lowcov_bp	primary_other_chrom	primary_other_start	primary_other_end	primary_strand	primary_identity	all_hits
+ZERO_COV:Chr01:100001-100500	Chr01	100001	100500	500	True	500	1.0	mapped_not_lowcov	0	Chr01	100001	100500	+	98.5	Chr01:100001-100500
+CRE:Chr01:250000-251000	Chr01	250000	251000	1001	True	1001	1.0	both_lowcov	800	Chr01	250000	251000	+	97.2	Chr01:250000-251000
+LOW_QV:Chr01:600000-605000	Chr01	600000	605000	5001	False	0	0.0	unmapped	0			.	0	
+ZERO_COV:Chr02:120000-120200	Chr02	120000	120200	201	True	201	1.0	mapped_not_lowcov	0	Chr02	120000	120200	+	99.1	Chr02:120000-120200
+CRE:Chr02:400000-402000	Chr02	400000	402000	2001	True	2001	1.0	both_lowcov	1500	Chr02	400000	402000	-	96.0	Chr02:400000-402000

@@ -15,7 +15,7 @@ set -euo pipefail
 ASMLENS_HOME="${ASMLENS_HOME:-$HOME/asmlens}"
 ASMLENS_GIT="${ASMLENS_GIT:-https://github.com/yrzhu-ai/AsmLens.git}"
 ASMLENS_BRANCH="${ASMLENS_BRANCH:-main}"
-ENV_NAME="${ASMLENS_ENV_NAME:-asmlens}"
+ENV_NAME="${ASMLENS_ENV_NAME:-AsmLens-env}"
 
 echo "============================================================"
 echo " AsmLens installer"
@@ -119,11 +119,15 @@ echo
 echo " Make sure ~/.local/bin is on PATH, e.g.:"
 echo "   echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc && source ~/.bashrc"
 echo
+echo " Activate:"
+echo "   conda activate ${ENV_NAME}"
+echo
 echo " Quick test:"
-echo "   asmlens run -h"
+echo "   asmlens -h"
 echo
 echo " Example:"
-echo "   asmlens run -q assembly.fa -hifi reads.hifi.fq.gz -t 16 -o asmlens_out"
+echo "   asmlens -q assembly.fa -ref reference.fa -hifi reads.hifi.fq.gz -t 16 -o asmlens_out"
+echo "   asmlens -q assembly.fa --bam existing.bam --craq /path/to/CRAQ -o asmlens_out"
 echo "   # download asmlens_out/asmlens_bundle_*.zip to desktop, then:"
 echo "   asmlens desktop -p asmlens_bundle_*.zip"
 echo "============================================================"

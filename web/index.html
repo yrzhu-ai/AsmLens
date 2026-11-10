@@ -1,46 +1,236 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
   <title>AsmLens</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
+  <nav class="menubar" aria-label="主菜单">
+    <div class="menu">
+      <button type="button" class="menu-btn" data-menu="file">文件</button>
+      <div class="menu-panel" id="menu-file">
+        <button type="button" data-action="open-bundle">打开交付包…</button>
+        <button type="button" data-action="export-image">导出图片…</button>
+        <hr />
+        <button type="button" data-action="reload">重新加载工程</button>
+      </div>
+    </div>
+    <div class="menu">
+      <button type="button" class="menu-btn" data-menu="view">视图</button>
+      <div class="menu-panel" id="menu-view">
+        <button type="button" data-action="zoom-in">放大</button>
+        <button type="button" data-action="zoom-out">缩小</button>
+        <button type="button" data-action="fit-chr">整条染色体</button>
+        <hr />
+        <button type="button" data-action="toggle-sidebar">显示/隐藏侧栏</button>
+      </div>
+    </div>
+    <div class="menu">
+      <button type="button" class="menu-btn" data-menu="filter">筛选</button>
+      <div class="menu-panel" id="menu-filter">
+        <button type="button" data-action="filter-genome-query">仅组装基因组问题</button>
+        <button type="button" data-action="filter-genome-ref">仅参考基因组问题</button>
+        <button type="button" data-action="filter-attr-asm">组装异常且参考正常</button>
+        <button type="button" data-action="filter-attr-both">组装与参考均异常</button>
+        <button type="button" data-action="filter-attr-unmap">无法映射到参考</button>
+        <button type="button" data-action="filter-reset">清除全部筛选</button>
+        <hr />
+        <label class="menu-field">最短长度 (bp)
+          <input id="minLenFilter" type="number" min="0" step="100" value="1000" />
+        </label>
+        <div class="menu-checks" id="attrChecks">
+          <label><input type="checkbox" name="attr" value="both_lowcov" checked /> 组装与参考均覆盖异常</label>
+          <label><input type="checkbox" name="attr" value="mapped_not_lowcov" checked /> 组装异常（参考对应区正常）</label>
+          <label><input type="checkbox" name="attr" value="unmapped" checked /> 无法映射到参考</label>
+        </div>
+      </div>
+    </div>
+    <div class="menu">
+      <button type="button" class="menu-btn" data-menu="help">帮助</button>
+      <div class="menu-panel" id="menu-help">
+        <button type="button" data-action="check-update">检查更新</button>
+        <button type="button" data-action="about">关于 AsmLens</button>
+      </div>
+    </div>
+  </nav>
+
   <header class="toolbar">
-    <div class="brand">AsmLens</div>
+    <input id="bundleInput" type="file" accept=".zip,application/zip" hidden />
     <label class="field">
-      <span>Chr</span>
+      <span>基因组</span>
+      <select id="genomeSelect">
+        <option value="query">组装 (query)</option>
+        <option value="ref">参考 (ref)</option>
+      </select>
+    </label>
+    <label class="field">
+      <span>染色体</span>
       <select id="chromSelect"></select>
     </label>
     <label class="field grow">
-      <span>Locus</span>
+      <span>区间</span>
       <input id="locusInput" type="text" placeholder="Chr01:1000000-2000000" />
     </label>
-    <button id="btnGo" type="button">Go</button>
-    <button id="btnZoomIn" type="button" title="Zoom in">+</button>
-    <button id="btnZoomOut" type="button" title="Zoom out">−</button>
-    <button id="btnFit" type="button">Fit chr</button>
+    <button id="btnGo" type="button">跳转</button>
+    <button id="btnZoomIn" type="button" title="放大">+</button>
+    <button id="btnZoomOut" type="button" title="缩小">−</button>
+    <button id="btnFit" type="button">整条染色体</button>
+    <button id="btnExport" type="button" title="导出当前视图">导出图片…</button>
     <span id="status" class="status"></span>
   </header>
 
-  <div class="main">
-    <aside class="sidebar">
-      <div class="side-head">
-        <h2>Problem regions</h2>
-        <select id="typeFilter">
-          <option value="">All types</option>
-        </select>
+  <div class="main" id="mainPane">
+    <aside class="sidebar" id="sidebar">
+      <div class="side-panel-one" id="sidePanelOne">
+        <header class="dock-panel-head">
+          <h3 id="sidePanelTitle">问题列表</h3>
+          <span class="panel-count" id="countAll">0</span>
+        </header>
+        <div class="side-features" id="sideFeatures">
+          <div class="side-features-label">功能区</div>
+          <label class="feat-check"><input type="checkbox" data-feature="coverage" /> 覆盖问题</label>
+          <label class="feat-check"><input type="checkbox" data-feature="craq" /> CRAQ 错误</label>
+          <label class="feat-check"><input type="checkbox" data-feature="refmap" /> 映射问题</label>
+          <label class="feat-check"><input type="checkbox" data-feature="synteny" /> 共线性 / 变异</label>
+        </div>
+        <div class="list-filters">
+          <label>来源
+            <select id="problemGenomeFilter">
+              <option value="all">全部</option>
+              <option value="query">组装</option>
+              <option value="ref">参考</option>
+            </select>
+          </label>
+          <label>染色体
+            <select id="problemChromFilter">
+              <option value="all">全部染色体</option>
+            </select>
+          </label>
+        </div>
+        <div class="lowcov-filters" id="lowcovFilters">
+          <div class="side-features-label">覆盖筛选（大基因组请先用默认）</div>
+          <label>级别
+            <select id="lowcovLevel">
+              <option value="zero" selected>仅零覆盖（默认）</option>
+              <option value="low">零覆盖 + 偏低</option>
+              <option value="all">全部覆盖问题</option>
+            </select>
+          </label>
+          <label>最短长度 (bp)
+            <input id="lowcovMinLen" type="number" min="0" step="100" value="1000" />
+          </label>
+        </div>
+        <div class="problem-list" id="listAll"></div>
       </div>
-      <div id="problemList" class="problem-list"></div>
+      <div id="detailPanel" class="detail-panel" hidden>
+        <h3>选中区间</h3>
+        <pre id="detailBody"></pre>
+      </div>
+      <!-- keep hidden buckets for internal counts / plugins -->
+      <div hidden>
+        <div id="listLowcov"></div><span id="countLowcov">0</span>
+        <div id="listCraq"></div><span id="countCraq">0</span>
+        <div id="listRefmap"></div><span id="countRefmap">0</span>
+        <div id="attrLegend"></div>
+        <div id="featureBar"></div>
+        <div id="dockPanels"></div>
+        <div id="pluginDockHost"></div>
+      </div>
     </aside>
-    <section class="viewer">
+    <div class="splitter" id="sidebarSplitter" title="拖动调整侧栏宽度" role="separator" aria-orientation="vertical"></div>
+    <section class="viewer" id="viewer">
+      <div id="emptyState" class="empty-state" hidden>
+        <p class="empty-title">尚未打开工程</p>
+        <p>请通过菜单 <strong>文件 → 打开交付包…</strong> 选择服务器生成的 zip。</p>
+        <p class="empty-sub">带 <code>-ref</code> 跑过的交付包才会出现参考基因组与共线性轨。</p>
+      </div>
+      <div class="chrom-overview" id="chromOverview" title="点击染色体高亮多选，点「确定」后只看所选共线；拖动定位橙框">
+        <div class="overview-toolbar" id="overviewToolbar">
+          <span class="ov-hint">全基因组仅共线 · 多选后确定再加载标注</span>
+          <span class="ov-sel" id="overviewSelQuery"><em>组装</em> <span class="chips">未选</span></span>
+          <span class="ov-sel" id="overviewSelRef"><em>参考</em> <span class="chips">未选</span></span>
+          <button type="button" id="btnOvApply" class="btn-ov-apply">确定</button>
+          <button type="button" id="btnOvClearSel" class="linkish">清除</button>
+          <button type="button" id="btnOvShowAll" class="linkish">显示全部</button>
+          <span class="ov-legend" title="标注图例">
+            <i class="lg gap"></i>Gap
+            <i class="lg zero"></i>零覆盖
+            <i class="lg low"></i>低覆盖
+            <i class="lg craq"></i>CRAQ
+            <i class="lg syn"></i>同染色体共线
+            <i class="lg xsyn"></i>跨染色体
+            <i class="lg telo"></i>有端粒
+          </span>
+        </div>
+        <div class="overview-row">
+          <div class="overview-label">组装</div>
+          <canvas id="overviewQuery" height="40"></canvas>
+        </div>
+        <div class="overview-row overview-syn-row" id="overviewSynRow" hidden>
+          <div class="overview-label">共线</div>
+          <canvas id="overviewSynteny" height="72"></canvas>
+        </div>
+        <div class="overview-row" id="overviewRefRow">
+          <div class="overview-label">参考</div>
+          <canvas id="overviewRef" height="40"></canvas>
+        </div>
+      </div>
+      <div id="selectionBar" class="selection-bar" hidden>
+        <strong>选中</strong>
+        <span id="selectionText">—</span>
+        <button type="button" id="btnClearSel" class="linkish">清除</button>
+      </div>
       <canvas id="ruler" height="28"></canvas>
       <div id="tracks" class="tracks"></div>
-      <div class="hint">Drag to pan · Scroll to zoom · Click a problem to jump (IGV-style)</div>
+      <div id="hoverTip" class="hover-tip" hidden></div>
+      <div class="hint">全基因组概览只画共线 · 选定染色体并勾选功能区后按需加载标注 · 覆盖轨上峰下Reads</div>
     </section>
   </div>
 
+  <footer class="statusbar">
+    <span id="sbProject">工程：—</span>
+    <span id="sbLocus">区间：—</span>
+    <span id="sbFilter">筛选：—</span>
+    <span id="sbFeatures" class="sb-features">功能：—</span>
+    <span id="sbUpdate" class="sb-right sb-update">更新：—</span>
+    <span id="sbVersion">AsmLens 1.0.0</span>
+  </footer>
+
+  <dialog id="aboutDialog">
+    <form method="dialog" class="about-box">
+      <h2>关于 AsmLens</h2>
+      <p><strong>AsmLens</strong>（Assembly Lens / 组装透镜）</p>
+      <p id="aboutMeaning"></p>
+      <p>版本：<span id="aboutVersion">1.0.0</span></p>
+      <p><a id="aboutGithub" href="https://github.com/yrzhu-ai/AsmLens" target="_blank" rel="noopener">GitHub 仓库</a></p>
+      <menu>
+        <button value="ok">关闭</button>
+      </menu>
+    </form>
+  </dialog>
+
+  <dialog id="exportDialog">
+    <form method="dialog" class="export-box">
+      <h2>导出图片</h2>
+      <p class="export-hint">选择格式后将弹出保存位置对话框。</p>
+      <fieldset class="export-formats">
+        <legend>格式</legend>
+        <label><input type="radio" name="exportFmt" value="png" checked /> PNG</label>
+        <label><input type="radio" name="exportFmt" value="svg" /> SVG</label>
+        <label><input type="radio" name="exportFmt" value="pdf" /> PDF</label>
+        <label><input type="radio" name="exportFmt" value="jpeg" /> JPEG</label>
+      </fieldset>
+      <menu>
+        <button value="cancel" type="submit">取消</button>
+        <button id="btnExportConfirm" value="export" type="submit">选择位置并导出</button>
+      </menu>
+    </form>
+  </dialog>
+
   <script src="/static/app.js"></script>
+  <script src="/static/plugins/loader.js"></script>
 </body>
 </html>

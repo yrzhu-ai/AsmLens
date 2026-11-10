@@ -70,27 +70,113 @@ def track_path(project: Dict[str, Any], track_id: str) -> Path:
     raise KeyError(track_id)
 
 
-def list_problems(project: Dict[str, Any]) -> List[Dict[str, Any]]:
+# Feature-category → problem type codes (keep in sync with web/app.js)
+PROBLEM_CATEGORY_TYPES: Dict[str, List[str]] = {
+    "lowcov": [
+        "ZERO_COV", "LOW_COV", "ZERO_Q", "LOW_Q", "ZERO_R", "LOW_R", "CRAQ_LOWCOV",
+    ],
+    "craq": ["CRE", "CRAQ_LOWCOV", "LOW_QV"],
+    "refmap": ["ATTR_Q", "ATTR_R"],
+    "synteny": [
+        "COLLINEAR", "INV", "TRANS", "DUP", "NOTAL",
+        "SYRI_SYN", "SYRI_INV", "SYRI_TRANS", "SYRI_DUP", "SYRI_NOTAL",
+        "SYRI_INVTR", "SYRI_INVDP",
+    ],
+}
+
+
+def _parse_problem_row(header: List[str], cols: List[str]) -> Optional[Dict[str, Any]]:
+    row = {header[i]: cols[i] if i < len(cols) else "" for i in range(len(header))}
+    try:
+        row["start"] = int(row.get("start", 0))
+        row["end"] = int(row.get("end", 0))
+        row["length"] = int(row.get("length", row["end"] - row["start"]))
+    except ValueError:
+        return None
+    return row
+
+
+def iter_problems(
+    project: Dict[str, Any],
+    *,
+    chroms: Optional[set] = None,
+    types: Optional[set] = None,
+    limit: Optional[int] = None,
+):
+    """Stream problems.tsv with optional chrom/type filters (stops early at limit)."""
     root = Path(project["_root"])
     path = root / project.get("problems_file", "problems.tsv")
     if not path.is_file():
-        return []
-    rows: List[Dict[str, Any]] = []
+        return
     with path.open(encoding="utf-8") as fh:
         header = fh.readline().rstrip("\n").split("\t")
+        n = 0
         for line in fh:
             if not line.strip():
                 continue
             cols = line.rstrip("\n").split("\t")
-            row = {header[i]: cols[i] if i < len(cols) else "" for i in range(len(header))}
-            try:
-                row["start"] = int(row.get("start", 0))
-                row["end"] = int(row.get("end", 0))
-                row["length"] = int(row.get("length", row["end"] - row["start"]))
-            except ValueError:
+            row = _parse_problem_row(header, cols)
+            if row is None:
                 continue
-            rows.append(row)
-    return rows
+            if chroms is not None and row.get("chrom") not in chroms:
+                continue
+            if types is not None and row.get("type") not in types:
+                continue
+            yield row
+            n += 1
+            if limit is not None and n >= limit:
+                return
+
+
+def list_problems(
+    project: Dict[str, Any],
+    *,
+    chroms: Optional[set] = None,
+    types: Optional[set] = None,
+    limit: Optional[int] = None,
+) -> List[Dict[str, Any]]:
+    return list(iter_problems(project, chroms=chroms, types=types, limit=limit))
+
+
+def count_problems(project: Dict[str, Any]) -> int:
+    """Fast line count for problems.tsv (avoids parsing on project open)."""
+    summary = project.get("summary") or {}
+    if isinstance(summary.get("problem_count"), int):
+        return int(summary["problem_count"])
+    if isinstance(project.get("problem_count"), int):
+        return int(project["problem_count"])
+    root = Path(project["_root"])
+    path = root / project.get("problems_file", "problems.tsv")
+    if not path.is_file():
+        return 0
+    n = 0
+    with path.open(encoding="utf-8") as fh:
+        next(fh, None)  # header
+        for line in fh:
+            if line.strip():
+                n += 1
+    return n
+
+
+def resolve_problem_types(
+    type_one: Optional[str] = None,
+    types_csv: Optional[str] = None,
+    categories_csv: Optional[str] = None,
+) -> Optional[set]:
+    """Build a type filter set from type / types / category query params."""
+    out: set = set()
+    if type_one:
+        out.add(type_one)
+    if types_csv:
+        out.update(t.strip() for t in types_csv.split(",") if t.strip())
+    if categories_csv:
+        for cat in categories_csv.split(","):
+            cat = cat.strip()
+            for t in PROBLEM_CATEGORY_TYPES.get(cat, []):
+                out.add(t)
+            # also accept SYN* prefix via category synteny — handled client-side;
+            # include common SYN_ codes if present as exact types above
+    return out or None
 
 
 def query_bed(
